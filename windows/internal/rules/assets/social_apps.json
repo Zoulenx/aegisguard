@@ -1,0 +1,124 @@
+{
+  "version": "1.0.0",
+  "social_apps": [
+    {
+      "id": "instagram",
+      "name": "Instagram",
+      "android_packages": ["com.instagram.android", "com.instagram.lite"],
+      "windows_processes": ["Instagram.exe"],
+      "web_domains": ["instagram.com", "www.instagram.com"],
+      "trigger_tabs": ["Explore", "Explorar", "Reels", "Search and explore", "Buscar y explorar"],
+      "trigger_url_paths": ["/explore", "/reels"]
+    },
+    {
+      "id": "tiktok",
+      "name": "TikTok",
+      "android_packages": ["com.zhiliaoapp.musically", "com.ss.android.ugc.trill", "com.zhiliaoapp.musically.go"],
+      "windows_processes": ["TikTok.exe"],
+      "web_domains": ["tiktok.com", "www.tiktok.com"],
+      "trigger_tabs": ["For You", "Para ti", "LIVE", "En vivo", "Discover", "Descubrir"],
+      "trigger_url_paths": ["/foryou", "/live", "/explore", "/discover"]
+    },
+    {
+      "id": "x_twitter",
+      "name": "X (Twitter)",
+      "android_packages": ["com.twitter.android", "com.twitter.android.lite"],
+      "windows_processes": ["Twitter.exe", "X.exe"],
+      "web_domains": ["x.com", "twitter.com", "mobile.twitter.com"],
+      "trigger_tabs": ["Search", "Buscar", "Explore", "Explorar", "Grok"],
+      "trigger_url_paths": ["/explore", "/search"]
+    },
+    {
+      "id": "reddit",
+      "name": "Reddit",
+      "android_packages": ["com.reddit.frontpage"],
+      "windows_processes": ["Reddit.exe"],
+      "web_domains": ["reddit.com", "www.reddit.com", "old.reddit.com"],
+      "trigger_tabs": ["Popular", "Watch", "Ver", "Latest"],
+      "trigger_url_paths": ["/r/popular", "/r/all", "/search"]
+    },
+    {
+      "id": "telegram",
+      "name": "Telegram",
+      "android_packages": ["org.telegram.messenger", "org.telegram.messenger.web", "org.thunderdog.challegram"],
+      "windows_processes": ["Telegram.exe"],
+      "web_domains": ["web.telegram.org", "t.me"],
+      "trigger_tabs": ["Channels", "Canales", "Global Search"],
+      "trigger_url_paths": []
+    },
+    {
+      "id": "youtube",
+      "name": "YouTube",
+      "android_packages": ["com.google.android.youtube"],
+      "windows_processes": ["YouTube.exe"],
+      "web_domains": ["youtube.com", "www.youtube.com", "m.youtube.com"],
+      "trigger_tabs": ["Shorts"],
+      "trigger_url_paths": ["/shorts"]
+    },
+    {
+      "id": "facebook",
+      "name": "Facebook",
+      "android_packages": ["com.facebook.katana", "com.facebook.lite"],
+      "windows_processes": ["Facebook.exe"],
+      "web_domains": ["facebook.com", "www.facebook.com", "m.facebook.com"],
+      "trigger_tabs": ["Reels", "Watch", "Video", "Dating", "Parejas"],
+      "trigger_url_paths": ["/reel", "/reels", "/watch"]
+    },
+    {
+      "id": "snapchat",
+      "name": "Snapchat",
+      "android_packages": ["com.snapchat.android"],
+      "windows_processes": ["Snapchat.exe"],
+      "web_domains": ["snapchat.com", "web.snapchat.com"],
+      "trigger_tabs": ["Spotlight", "Discover", "Descubrir", "Stories"],
+      "trigger_url_paths": ["/spotlight"]
+    },
+    {
+      "id": "threads",
+      "name": "Threads",
+      "android_packages": ["com.instagram.barcelona"],
+      "windows_processes": [],
+      "web_domains": ["threads.net", "www.threads.net"],
+      "trigger_tabs": ["Search", "Buscar"],
+      "trigger_url_paths": ["/search"]
+    },
+    {
+      "id": "discord",
+      "name": "Discord",
+      "android_packages": ["com.discord"],
+      "windows_processes": ["Discord.exe"],
+      "web_domains": ["discord.com", "discordapp.com"],
+      "trigger_tabs": ["Discover", "Descubrir"],
+      "trigger_url_paths": ["/discovery"]
+    },
+    {
+      "id": "twitch",
+      "name": "Twitch",
+      "android_packages": ["tv.twitch.android.app"],
+      "windows_processes": ["Twitch.exe"],
+      "web_domains": ["twitch.tv", "www.twitch.tv"],
+      "trigger_tabs": ["Browse", "Explorar", "Pools, Hot Tubs, and Beaches"],
+      "trigger_url_paths": ["/directory/category/pools-hot-tubs-and-beaches"]
+    }
+  ],
+  "safesearch_rewrites": {
+    "google.com": "forcesafesearch.google.com",
+    "www.google.com": "forcesafesearch.google.com",
+    "google.es": "forcesafesearch.google.com",
+    "www.google.es": "forcesafesearch.google.com",
+    "google.com.mx": "forcesafesearch.google.com",
+    "www.google.com.mx": "forcesafesearch.google.com",
+    "google.com.co": "forcesafesearch.google.com",
+    "www.google.com.co": "forcesafesearch.google.com",
+    "google.com.ar": "forcesafesearch.google.com",
+    "www.google.com.ar": "forcesafesearch.google.com",
+    "bing.com": "strict.bing.com",
+    "www.bing.com": "strict.bing.com",
+    "duckduckgo.com": "safe.duckduckgo.com",
+    "www.duckduckgo.com": "safe.duckduckgo.com",
+    "youtube.com": "restrictmoderate.youtube.com",
+    "www.youtube.com": "restrictmoderate.youtube.com",
+    "m.youtube.com": "restrictmoderate.youtube.com",
+    "search.brave.com": "safesearch.brave.com"
+  }
+}

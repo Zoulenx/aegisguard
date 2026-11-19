@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>Bloqueado por AegisGuard</title>
+  <style>
+    body {
+      margin: 0; min-height: 100vh; display: grid; place-items: center;
+      background: #0b1120; color: #f3f4f6;
+      font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    }
+    .box {
+      max-width: 540px; padding: 36px; border-radius: 16px; text-align: center;
+      background: #111827; border: 1px solid #1f2937;
+    }
+    .icon {
+      width: 64px; height: 64px; margin: 0 auto 18px; border-radius: 16px;
+      background: linear-gradient(135deg, #0284c7, #10b981);
+      display: grid; place-items: center; font-size: 30px; font-weight: 800;
+    }
+    h1 { margin: 0 0 10px; font-size: 24px; }
+    p { color: #9ca3af; font-size: 15px; line-height: 1.6; }
+    .reason {
+      background: #0f172a; border: 1px solid #334155; border-radius: 10px;
+      padding: 10px 14px; margin: 18px 0; font-size: 13px; color: #fca5a5;
+    }
+    .actions { display: flex; gap: 10px; justify-content: center; margin-top: 20px; }
+    a {
+      text-decoration: none; padding: 10px 16px; border-radius: 8px; font-weight: 600; font-size: 14px;
+      background: #0284c7; color: #fff;
+    }
+    a.sec { background: #334155; }
+  </style>
+</head>
+<body>
+  <div class="box">
+    <div class="icon">A</div>
+    <h1>Contenido Bloqueado por AegisGuard</h1>
+    <p>Respira profundo 10 segundos. Este bloqueo protege el compromiso que tú mismo elegiste. No hay atajos ni botones de pago para saltarlo.</p>
+    <div id="reason" class="reason">Filtro activo</div>
+    <div class="actions">
+      <a href="http://127.0.0.1:18492">Abrir Panel / Botón de Pánico</a>
+      <a class="sec" href="javascript:history.back()">Volver atrás</a>
+    </div>
+  </div>
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    document.getElementById('reason').textContent = params.get('reason') || 'Contenido explícito o disparador bloqueado';
+  </script>
+</body>
+</html>

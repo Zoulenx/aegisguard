@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AegisGuard — Panel de Protección Total</title>
+  <style>
+    :root {
+      --bg: #0b1120;
+      --card: #111827;
+      --border: #1f2937;
+      --text: #f3f4f6;
+      --muted: #9ca3af;
+      --accent: #38bdf8;
+      --green: #10b981;
+      --red: #ef4444;
+      --amber: #f59e0b;
+    }
+    * { box-sizing: border-box; font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; }
+    body { margin: 0; background: var(--bg); color: var(--text); line-height: 1.5; }
+    header {
+      background: linear-gradient(135deg, #0f172a, #1e293b);
+      border-bottom: 1px solid var(--border);
+      padding: 18px 28px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .brand { display: flex; align-items: center; gap: 12px; }
+    .shield {
+      width: 40px; height: 40px; border-radius: 10px;
+      background: linear-gradient(135deg, #0284c7, #10b981);
+      display: grid; place-items: center; font-weight: 800; font-size: 20px;
+    }
+    .badge {
+      padding: 4px 10px; border-radius: 999px; font-size: 12px; font-weight: 600;
+      background: rgba(16, 185, 129, 0.15); color: var(--green); border: 1px solid rgba(16, 185, 129, 0.35);
+    }
+    .badge.warn { background: rgba(245, 158, 11, 0.15); color: var(--amber); border-color: rgba(245, 158, 11, 0.35); }
+    .badge.danger { background: rgba(239, 68, 68, 0.18); color: #fca5a5; border-color: rgba(239, 68, 68, 0.45); }
+    main { max-width: 1180px; margin: 24px auto; padding: 0 20px 60px; display: grid; gap: 20px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px; }
+    .card {
+      background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 20px;
+    }
+    h2 { margin: 0 0 12px; font-size: 17px; display: flex; justify-content: space-between; align-items: center; }
+    .muted { color: var(--muted); font-size: 13px; }
+    .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 12px; }
+    .stat { background: #0f172a; border: 1px solid var(--border); border-radius: 10px; padding: 12px; text-align: center; }
+    .stat strong { display: block; font-size: 22px; color: var(--accent); }
+    button {
+      background: #0284c7; color: #fff; border: none; border-radius: 8px; padding: 9px 14px;
+      font-weight: 600; cursor: pointer; font-size: 13px; transition: opacity .15s;
+    }
+    button:hover { opacity: 0.9; }
+    button.danger { background: var(--red); }
+    button.secondary { background: #334155; }
+    button.green { background: #059669; }
+    input, textarea, select {
+      width: 100%; background: #0f172a; color: var(--text); border: 1px solid #334155;
+      border-radius: 8px; padding: 9px 11px; font-size: 13px; margin: 6px 0 10px;
+    }
+    .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; word-break: break-all; }
+    .challenge-box {
+      background: #090d16; border: 1px dashed var(--amber); padding: 12px; border-radius: 8px;
+      user-select: none; -webkit-user-select: none; font-size: 13px; letter-spacing: 0.4px;
+    }
+    .log-list { max-height: 250px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
+    .log-item { background: #0f172a; border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; font-size: 12px; }
+    .alert { padding: 10px 12px; border-radius: 8px; margin-top: 10px; font-size: 13px; display: none; }
+    .alert.ok { display: block; background: rgba(16,185,129,0.15); border: 1px solid var(--green); color: #a7f3d0; }
+    .alert.err { display: block; background: rgba(239,68,68,0.15); border: 1px solid var(--red); color: #fecaca; }
+  </style>
+</head>
+<body>
+<header>
+  <div class="brand">
+    <div class="shield">A</div>
+    <div>
+      <div style="font-weight:700;font-size:18px;">AegisGuard</div>
+      <div class="muted">Bloqueo explícito estricto · Sin monedas · Sin atajos · Windows + Android</div>
+    </div>
+  </div>
+  <div class="row">
+    <span id="lockBadge" class="badge">Cargando estado...</span>
+    <span id="chainBadge" class="badge">Auditoría intacta</span>
+  </div>
+</header>
+
+<main>
+  <!-- Top Panic & Stats -->
+  <div class="grid">
+    <div class="card">
+      <h2>Estado de Protección <span id="deviceId" class="muted mono"></span></h2>
+      <div id="lockReason" class="muted">Verificando reloj NTP y servicios...</div>
+      <div class="stats">
+        <div class="stat"><strong id="statBlocked">0</strong><span class="muted">Bloqueados</span></div>
+        <div class="stat"><strong id="statSafe">0</strong><span class="muted">SafeSearch</span></div>
+        <div class="stat"><strong id="statAllowed">0</strong><span class="muted">Permitidos</span></div>
+      </div>
+      <div class="muted" style="margin-top:12px;">
+        <strong>Horario nocturno:</strong> <span id="nightInfo">-</span><br/>
+        <strong>Bloqueo de pestañas disparadoras (Reels/Explorar/Shorts):</strong> <span id="triggersInfo">Activo</span>
+      </div>
+    </div>
+
+    <div class="card" style="border-color: rgba(239,68,68,0.4);">
+      <h2>Botón de Pánico (Anti-Recaída)</h2>
+      <p class="muted">Si sientes tentación o aparece un detonante, bloquea inmediatamente todas las redes sociales y sitios de riesgo sin posibilidad de cancelación anticipada.</p>
+      <div class="row" style="margin-top:14px;">
+        <button class="danger" onclick="activatePanic(30)">Bloquear 30 min</button>
+        <button class="danger" onclick="activatePanic(60)">Bloquear 60 min</button>
+        <button class="danger" onclick="activatePanic(180)">Bloquear 3 horas</button>
+      </div>
+      <div id="panicStatus" class="alert"></div>
+    </div>
+  </div>
+
+  <!-- Hardening & Lock Modes -->
+  <div class="grid">
+    <div class="card">
+      <h2>Modo Compromiso Estricto (Lockdown)</h2>
+      <p class="muted">Durante los días elegidos <strong>no existe ningún botón de desbloqueo</strong>, ni siquiera con enfriamiento o desafío.</p>
+      <label class="muted">Días de compromiso:</label>
+      <select id="lockdownDays">
+        <option value="7">7 días</option>
+        <option value="15">15 días</option>
+        <option value="30" selected>30 días</option>
+        <option value="90">90 días</option>
+      </select>
+      <button class="green" onclick="enableLockdown()">Activar Modo Compromiso</button>
+      <div id="lockdownMsg" class="alert"></div>
+
+      <hr style="border:none;border-top:1px solid var(--border);margin:18px 0;" />
+      <h2>Persona de Confianza (Accountability)</h2>
+      <p class="muted">Genera una llave secreta para entregar a un amigo o familiar. Sin su código HMAC no se puede modificar nada.</p>
+      <button class="secondary" onclick="setupPartner()">Configurar Persona de Confianza</button>
+      <div id="partnerSecretOut" class="alert"></div>
+    </div>
+
+    <div class="card">
+      <h2>Desbloqueo con Alta Fricción (Sin Atajos)</h2>
+      <p class="muted">Para desactivar filtros o desinstalar se requiere: <strong>Enfriamiento obligatorio (24h–7 días)</strong> + <strong>Desafío de 180 caracteres sin pegar</strong> (o código de Persona de Confianza).</p>
+      <div id="cooldownBox" class="muted" style="margin-bottom:10px;">Sin solicitud de enfriamiento activa.</div>
+      <input id="unlockReason" placeholder="Motivo honesto para solicitar el enfriamiento..." />
+      <div class="row">
+        <button class="secondary" onclick="requestCooldown()">Iniciar Enfriamiento</button>
+        <button class="green" onclick="cancelCooldown()">Cancelar Solicitud (1 clic)</button>
+      </div>
+      <div id="unlockMsg" class="alert"></div>
+
+      <div style="margin-top:14px;">
+        <button class="secondary" onclick="startFriction()">Iniciar Desafío de Fricción (180 chars)</button>
+        <div id="frictionArea" style="display:none;margin-top:10px;">
+          <div id="frictionTarget" class="challenge-box mono"></div>
+          <textarea id="frictionInput" rows="4" placeholder="Escribe manualmente los 180 caracteres exactos (pegar está deshabilitado)..."
+            onpaste="return false" ondrop="return false" autocomplete="off" spellcheck="false"></textarea>
+          <button onclick="submitFriction()">Verificar Desafío</button>
+        </div>
+      </div>
+
+      <div style="margin-top:14px;">
+        <div class="row">
+          <button class="secondary" onclick="startPartnerChallenge()">Generar Reto para Persona de Confianza</button>
+        </div>
+        <div id="partnerChallengeOut" class="muted mono" style="margin-top:6px;"></div>
+        <div class="row" style="margin-top:6px;">
+          <input id="partnerCodeInput" placeholder="Código de 12 caracteres del socio..." style="margin:0;flex:1;" />
+          <button onclick="verifyPartnerCode()">Validar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Live Semantic Filter Tester & Custom Rules + Sync -->
+  <div class="grid">
+    <div class="card">
+      <h2>Simulador de Filtro Inteligente (Redes y Web)</h2>
+      <p class="muted">Prueba palabras explícitas, jerga, leetspeak (<code>p0rn0</code>, <code>s3x0</code>), letras separadas o dominios para ver cómo responde el motor.</p>
+      <input id="testText" placeholder="Ej: p0rn0 gratis, chicas d3snud4s, p o r n o, pornhub.com..." />
+      <button onclick="runFilterTest()">Probar Detección</button>
+      <div id="testResult" class="alert"></div>
+
+      <hr style="border:none;border-top:1px solid var(--border);margin:18px 0;" />
+      <h2>Reforzar Reglas Personalizadas</h2>
+      <input id="extraDomain" placeholder="Añadir dominio a bloquear (ej: sitio-riesgoso.com)" />
+      <input id="extraKeyword" placeholder="Añadir palabra/frase prohibida (ej: cuenta especifica)" />
+      <button class="green" onclick="addCustomRules()">Añadir Bloqueo Inmediato</button>
+      <div id="customMsg" class="alert"></div>
+    </div>
+
+    <div class="card">
+      <h2>Sincronización Windows ↔ Android</h2>
+      <p class="muted">Exporta o importa tus reglas entre PC y móvil sin cuenta en la nube. Al importar, siempre gana la protección más estricta.</p>
+      <input id="syncKey" type="password" placeholder="Clave compartida entre tu PC y Android" />
+      <div class="row">
+        <button onclick="exportSync()">Exportar Token</button>
+        <button class="secondary" onclick="importSync()">Importar Token</button>
+      </div>
+      <textarea id="syncToken" rows="3" class="mono" placeholder="Pega aquí el token de sincronización de Android o copia el generado..."></textarea>
+      <div id="syncMsg" class="alert"></div>
+
+      <hr style="border:none;border-top:1px solid var(--border);margin:18px 0;" />
+      <h2>Registro de Auditoría (Anti-Manipulación)</h2>
+      <div id="auditLog" class="log-list"></div>
+    </div>
+  </div>
+</main>
+
+<script>
+async function api(path, method = 'GET', body = null) {
+  const opts = { method, headers: { 'Content-Type': 'application/json' } };
+  if (body) opts.body = JSON.stringify(body);
+  const res = await fetch(path, opts);
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'Error de operación');
+  return data;
+}
+
+function showMsg(id, text, ok = true) {
+  const el = document.getElementById(id);
+  el.className = 'alert ' + (ok ? 'ok' : 'err');
+  el.textContent = text;
+}
+
+async function refresh() {
+  try {
+    const data = await api('/api/status');
+    document.getElementById('deviceId').textContent = data.state.device_id;
+    document.getElementById('statBlocked').textContent = data.dns_stats.blocked;
+    document.getElementById('statSafe').textContent = data.dns_stats.safesearch;
+    document.getElementById('statAllowed').textContent = data.dns_stats.allowed;
+    document.getElementById('lockReason').textContent = data.lock_reason;
+
+    const lb = document.getElementById('lockBadge');
+    if (data.state.clock_tamper_detected) {
+      lb.className = 'badge danger'; lb.textContent = 'Alerta: Reloj manipulado';
+    } else if (data.locked) {
+      lb.className = 'badge'; lb.textContent = 'Protección Blindada';
+    } else {
+      lb.className = 'badge warn'; lb.textContent = 'Ventana de edición abierta';
+    }
+
+    const cb = document.getElementById('chainBadge');
+    cb.className = data.audit_valid ? 'badge' : 'badge danger';
+    cb.textContent = data.audit_valid ? 'Auditoría SHA-256 intacta' : 'Auditoría alterada';
+
+    const ns = data.state.night_schedule;
+    document.getElementById('nightInfo').textContent = ns.enabled
+      ? `${String(ns.start_hour).padStart(2,'0')}:00 a ${String(ns.end_hour).padStart(2,'0')}:00`
+      : 'Desactivado';
+
+    const cd = data.state.cooldown;
+    if (cd && cd.active) {
+      const unlockDate = new Date(cd.unlocks_at_utc * 1000).toLocaleString();
+      document.getElementById('cooldownBox').textContent = `Enfriamiento en curso. Se abrirá el: ${unlockDate}`;
+    } else {
+      document.getElementById('cooldownBox').textContent = `Sin solicitud activa (tiempo requerido: ${data.state.cooldown_hours}h).`;
+    }
+
+    const logEl = document.getElementById('auditLog');
+    const items = (data.state.audit_log || []).slice(-12).reverse();
+    logEl.innerHTML = items.map(e => `
+      <div class="log-item">
+        <strong>${e.event}</strong> · <span class="muted">${new Date(e.timestamp_utc*1000).toLocaleString()}</span><br/>
+        <span>${e.detail}</span>
+      </div>`).join('');
+  } catch (e) { console.error(e); }
+}
+
+async function activatePanic(mins) {
+  try {
+    await api('/api/panic', 'POST', { minutes: mins });
+    showMsg('panicStatus', `Botón de Pánico activado por ${mins} minutos. Redes sociales bloqueadas.`, true);
+    refresh();
+  } catch (e) { showMsg('panicStatus', e.message, false); }
+}
+
+async function enableLockdown() {
+  try {
+    const days = parseInt(document.getElementById('lockdownDays').value, 10);
+    await api('/api/lockdown', 'POST', { days });
+    showMsg('lockdownMsg', `Modo Compromiso Estricto activado por ${days} días.`, true);
+    refresh();
+  } catch (e) { showMsg('lockdownMsg', e.message, false); }
+}
+
+async function setupPartner() {
+  try {
+    const res = await api('/api/partner/setup', 'POST', {});
+    showMsg('partnerSecretOut', `GUARDA ESTA CLAVE SOLO CON TU PERSONA DE CONFIANZA (no volverá a mostrarse): ${res.partner_secret}`, true);
+    refresh();
+  } catch (e) { showMsg('partnerSecretOut', e.message, false); }
+}
+
+async function requestCooldown() {
+  try {
+    const reason = document.getElementById('unlockReason').value;
+    await api('/api/cooldown/request', 'POST', { reason });
+    showMsg('unlockMsg', 'Temporizador de enfriamiento iniciado. Puedes cancelarlo en cualquier momento.', true);
+    refresh();
+  } catch (e) { showMsg('unlockMsg', e.message, false); }
+}
+
+async function cancelCooldown() {
+  try {
+    await api('/api/cooldown/cancel', 'POST', {});
+    document.getElementById('frictionArea').style.display = 'none';
+    showMsg('unlockMsg', 'Solicitud de desbloqueo cancelada. Protección firme.', true);
+    refresh();
+  } catch (e) { showMsg('unlockMsg', e.message, false); }
+}
+
+async function startFriction() {
+  try {
+    const res = await api('/api/friction/start', 'POST', {});
+    document.getElementById('frictionTarget').textContent = res.expected_text;
+    document.getElementById('frictionInput').value = '';
+    document.getElementById('frictionArea').style.display = 'block';
+    showMsg('unlockMsg', 'Escribe los 180 caracteres manualmente (espera mínima 90 segundos).', true);
+  } catch (e) { showMsg('unlockMsg', e.message, false); }
+}
+
+async function submitFriction() {
+  try {
+    const typed = document.getElementById('frictionInput').value;
+    await api('/api/friction/verify', 'POST', { typed });
+    document.getElementById('frictionArea').style.display = 'none';
+    showMsg('unlockMsg', 'Desafío superado. Ventana de edición abierta por 15 minutos.', true);
+    refresh();
+  } catch (e) { showMsg('unlockMsg', e.message, false); }
+}
+
+async function startPartnerChallenge() {
+  try {
+    const res = await api('/api/partner/challenge', 'POST', {});
+    document.getElementById('partnerChallengeOut').textContent = `Envía este Reto a tu Persona de Confianza -> Dispositivo: ${res.device_id} | Reto: ${res.challenge_id}`;
+  } catch (e) { showMsg('unlockMsg', e.message, false); }
+}
+
+async function verifyPartnerCode() {
+  try {
+    const code = document.getElementById('partnerCodeInput').value;
+    await api('/api/partner/verify', 'POST', { code });
+    showMsg('unlockMsg', 'Código aprobado. Ventana de edición abierta por 15 minutos.', true);
+    refresh();
+  } catch (e) { showMsg('unlockMsg', e.message, false); }
+}
+
+async function runFilterTest() {
+  try {
+    const input = document.getElementById('testText').value;
+    const res = await api('/api/test', 'POST', { input });
+    const blocked = res.text_verdict.blocked || res.domain_decision.action === 'BLOCK';
+    const msg = blocked
+      ? `BLOQUEADO -> Texto: ${res.text_verdict.reason || 'OK'} | Dominio: ${res.domain_decision.reason || res.domain_decision.action}`
+      : `PERMITIDO (Score: ${res.text_verdict.score}) | Dominio: ${res.domain_decision.action} ${res.domain_decision.safesearch_host || ''}`;
+    showMsg('testResult', msg, !blocked);
+  } catch (e) { showMsg('testResult', e.message, false); }
+}
+
+async function addCustomRules() {
+  try {
+    const d = document.getElementById('extraDomain').value.trim();
+    const k = document.getElementById('extraKeyword').value.trim();
+    await api('/api/rules/add', 'POST', {
+      domains: d ? [d] : [],
+      keywords: k ? [k] : []
+    });
+    document.getElementById('extraDomain').value = '';
+    document.getElementById('extraKeyword').value = '';
+    showMsg('customMsg', 'Reglas añadidas y aplicadas inmediatamente.', true);
+    refresh();
+  } catch (e) { showMsg('customMsg', e.message, false); }
+}
+
+async function exportSync() {
+  try {
+    const key = document.getElementById('syncKey').value;
+    const res = await api('/api/sync/export', 'POST', { key });
+    document.getElementById('syncToken').value = res.token;
+    showMsg('syncMsg', 'Token generado. Cópialo o escanéalo en AegisGuard Android.', true);
+  } catch (e) { showMsg('syncMsg', e.message, false); }
+}
+
+async function importSync() {
+  try {
+    const key = document.getElementById('syncKey').value;
+    const token = document.getElementById('syncToken').value;
+    await api('/api/sync/import', 'POST', { key, token });
+    showMsg('syncMsg', 'Reglas sincronizadas correctamente (convergencia hacia mayor protección).', true);
+    refresh();
+  } catch (e) { showMsg('syncMsg', e.message, false); }
+}
+
+refresh();
+setInterval(refresh, 5000);
+</script>
+</body>
+</html>

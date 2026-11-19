@@ -1,0 +1,29 @@
+{
+  "manifest_version": 3,
+  "name": "AegisGuard — Filtro de Navegador y Redes",
+  "version": "1.0.0",
+  "description": "Bloquea búsquedas sexuales (incluso ofuscadas), sitios explícitos y pestañas disparadoras (Reels, Explorar, Shorts) en navegadores de escritorio.",
+  "permissions": [
+    "tabs",
+    "webNavigation"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "run_at": "document_start"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["blocked.html"],
+      "matches": ["<all_urls>"]
+    }
+  ]
+}
