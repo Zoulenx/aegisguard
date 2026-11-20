@@ -63,6 +63,12 @@
                 android:resource="@xml/accessibility_service_config" />
         </service>
 
+        <!-- Servicio de IA Visual 100% Local en Pantalla (MediaProjection + TensorFlow Lite) -->
+        <service
+            android:name=".vision.ScreenVisionService"
+            android:exported="false"
+            android:foregroundServiceType="mediaProjection" />
+
         <!-- Administrador / Propietario de Dispositivo (Device Owner) anti-desinstalación -->
         <receiver
             android:name=".admin.AegisDeviceAdminReceiver"

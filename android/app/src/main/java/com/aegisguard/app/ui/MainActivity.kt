@@ -2,7 +2,9 @@ package com.aegisguard.app.ui
 
 import android.app.Activity
 import android.app.admin.DevicePolicyManager
+import android.content.Context
 import android.content.Intent
+import android.media.projection.MediaProjectionManager
 import android.net.VpnService
 import android.os.Build
 import android.os.Bundle
@@ -29,6 +31,7 @@ import com.aegisguard.app.filter.DomainFilter
 import com.aegisguard.app.filter.SemanticContentFilter
 import com.aegisguard.app.security.LockManager
 import com.aegisguard.app.security.NtpTimeVerifier
+import com.aegisguard.app.vision.ScreenVisionService
 import com.aegisguard.app.vpn.AegisVpnService
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -44,6 +47,22 @@ class MainActivity : ComponentActivity() {
     ) { res ->
         if (res.resultCode == Activity.RESULT_OK) {
             startAegisVpn()
+        }
+    }
+
+    private val visionCaptureLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { res ->
+        if (res.resultCode == Activity.RESULT_OK && res.data != null) {
+            val svc = Intent(this, ScreenVisionService::class.java).apply {
+                putExtra(ScreenVisionService.EXTRA_RESULT_CODE, res.resultCode)
+                putExtra(ScreenVisionService.EXTRA_RESULT_DATA, res.data)
+            }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                startForegroundService(svc)
+            } else {
+                startService(svc)
+            }
         }
     }
 
@@ -66,6 +85,7 @@ class MainActivity : ComponentActivity() {
                 domainFilter = domainFilter,
                 isDeviceOwner = AegisDeviceAdminReceiver.isDeviceOwner(this),
                 onStartVpn = { requestAndStartVpn() },
+                onStartVisionAi = { requestAndStartVisionAi() },
                 onOpenAccessibility = { startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)) },
                 onRequestDeviceAdmin = {
                     val intent = Intent(DevicePolicyManager.ACTION_ADD_DEVICE_ADMIN).apply {
@@ -93,6 +113,11 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    private fun requestAndStartVisionAi() {
+        val mgr = getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
+        visionCaptureLauncher.launch(mgr.createScreenCaptureIntent())
+    }
+
     private fun startAegisVpn() {
         val intent = Intent(this, AegisVpnService::class.java)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -110,6 +135,7 @@ private fun AegisDashboard(
     domainFilter: DomainFilter,
     isDeviceOwner: Boolean,
     onStartVpn: () -> Unit,
+    onStartVisionAi: () -> Unit,
     onOpenAccessibility: () -> Unit,
     onRequestDeviceAdmin: () -> Unit,
     onApplyDeviceOwner: () -> Result<String>
@@ -137,15 +163,15 @@ private fun AegisDashboard(
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
         // Header
-        Text("AegisGuard Android", color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+        Text("AegisGuard v1.1 Android", color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Bold)
         Text(
-            "ID: ${lockManager.deviceId} · Sin monedas · Sin atajos · Windows ↔ Android",
+            "ID: ${lockManager.deviceId} · IA Visual TFLite Local · Sin monedas · Windows ↔ Android",
             color = Color(0xFF9CA3AF),
             fontSize = 12.sp
         )
 
         // Estado & Permisos Clave
-        SectionCard("1. Activación de Escudos") {
+        SectionCard("1. Activación de Escudos + IA Visual") {
             Text(
                 text = if (locked) "Estado: BLINDADO ($lockReason)" else "Estado: Ventana temporal abierta",
                 color = if (locked) Color(0xFF34D399) else Color(0xFFFBBF24),
@@ -153,13 +179,20 @@ private fun AegisDashboard(
                 fontWeight = FontWeight.SemiBold
             )
             Text(
-                text = "DNS Bloqueados: ${AegisVpnService.blockedDnsCount.get()} · Device Owner: ${if (isDeviceOwner) "ACTIVO" else "No activado"}",
+                text = "DNS Bloq: ${AegisVpnService.blockedDnsCount.get()} · IA Visual: ${if (ScreenVisionService.isRunning.get()) "ACTIVA (${ScreenVisionService.activeEngineName})" else "Inactiva"} · IA Bloq: ${ScreenVisionService.visualBlocksCount.get()} (${ScreenVisionService.framesScannedCount.get()} cuadros)",
                 color = Color(0xFF9CA3AF),
                 fontSize = 12.sp
             )
             Spacer(Modifier.height(8.dp))
             Button(onClick = onStartVpn, modifier = Modifier.fillMaxWidth()) {
                 Text("Activar VPN Local (Bloqueo Web + SafeSearch)")
+            }
+            Button(
+                onClick = onStartVisionAi,
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF7C3AED)),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Activar IA Visual en Pantalla (100% Local TFLite)")
             }
             OutlinedButton(onClick = onOpenAccessibility, modifier = Modifier.fillMaxWidth()) {
                 Text("Activar Accesibilidad (Filtro en Instagram/TikTok/X/Telegram)", color = Color.White)

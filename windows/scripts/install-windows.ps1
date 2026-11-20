@@ -21,11 +21,19 @@ New-Item -ItemType Directory -Force -Path $DataDir | Out-Null
 # 2. Copiar binarios y extensión
 $MainExe     = Join-Path $DistDir "aegisguard.exe"
 $WatchdogExe = Join-Path $DistDir "aegisguard-watchdog.exe"
+$AiExe       = Join-Path $DistDir "aegisguard-ai.exe"
+$ModelsDir   = Join-Path $DistDir "models"
 if (!(Test-Path $MainExe) -or !(Test-Path $WatchdogExe)) {
     throw "No se encontraron los ejecutables en $DistDir. Compila primero con build-windows.sh o go build."
 }
 Copy-Item -Force $MainExe     (Join-Path $InstallDir "aegisguard.exe")
 Copy-Item -Force $WatchdogExe (Join-Path $InstallDir "aegisguard-watchdog.exe")
+if (Test-Path $AiExe) {
+    Copy-Item -Force $AiExe (Join-Path $InstallDir "aegisguard-ai.exe")
+}
+if (Test-Path $ModelsDir) {
+    Copy-Item -Recurse -Force $ModelsDir (Join-Path $InstallDir "models")
+}
 Copy-Item -Recurse -Force (Join-Path (Split-Path -Parent $ScriptRoot) "browser-extension") (Join-Path $InstallDir "browser-extension")
 
 # 3. Aplicar políticas estrictas de navegadores (SafeSearch, sin Incógnito, sin DoH)
@@ -42,18 +50,27 @@ Register-ScheduledTask -TaskName "AegisGuard-Core" -Action $ActionMain -Trigger 
 $ActionWatch = New-ScheduledTaskAction -Execute (Join-Path $InstallDir "aegisguard-watchdog.exe") -Argument "--bin `"$InstallDir\aegisguard.exe`" --apply-os=true"
 Register-ScheduledTask -TaskName "AegisGuard-Watchdog" -Action $ActionWatch -Trigger $TriggerBoot -Principal $PrincipalSys -Settings $Settings -Force | Out-Null
 
+if (Test-Path (Join-Path $InstallDir "aegisguard-ai.exe")) {
+    $ActionAI = New-ScheduledTaskAction -Execute (Join-Path $InstallDir "aegisguard-ai.exe") -Argument "`"$InstallDir\models\resnet_50_1by2_nsfw.onnx`""
+    Register-ScheduledTask -TaskName "AegisGuard-VisionAI" -Action $ActionAI -Trigger $TriggerBoot -Principal $PrincipalSys -Settings $Settings -Force | Out-Null
+}
+
 # 5. Endurecer permisos NTFS en C:\Program Files\AegisGuard y C:\ProgramData\AegisGuard
 # Solo SYSTEM y Administradores conservan control total; usuarios estándar solo lectura/ejecución.
 icacls $InstallDir /inheritance:r /grant:r "NT AUTHORITY\SYSTEM:(OI)(CI)F" "BUILTIN\Administrators:(OI)(CI)RX" "BUILTIN\Users:(OI)(CI)RX" | Out-Null
 icacls $DataDir    /inheritance:r /grant:r "NT AUTHORITY\SYSTEM:(OI)(CI)F" "BUILTIN\Administrators:(OI)(CI)R" | Out-Null
 
-# 6. Iniciar ambos servicios inmediatamente
+# 6. Iniciar todos los servicios inmediatamente
+if (Test-Path (Join-Path $InstallDir "aegisguard-ai.exe")) {
+    Start-ScheduledTask -TaskName "AegisGuard-VisionAI"
+    Start-Sleep -Seconds 2
+}
 Start-ScheduledTask -TaskName "AegisGuard-Core"
 Start-Sleep -Seconds 2
 Start-ScheduledTask -TaskName "AegisGuard-Watchdog"
 
 Write-Host ""
-Write-Host "[OK] AegisGuard instalado y activo bajo SYSTEM + Watchdog." -ForegroundColor Green
+Write-Host "[OK] AegisGuard v1.1 instalado (Core + Watchdog + IA Visual ResNet-50 ONNX)." -ForegroundColor Green
 Write-Host "     Panel de control local: http://127.0.0.1:18492" -ForegroundColor Yellow
 Write-Host "     Extensión de navegador lista en: $InstallDir\browser-extension" -ForegroundColor Yellow
 Write-Host "     (Cargar en Chrome/Edge/Brave en modo desarrollador o mediante política ForceInstall)." -ForegroundColor Gray

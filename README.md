@@ -1,61 +1,39 @@
-# AegisGuard — Bloqueador Estricto de Contenido Explícito (Windows + Android)
+# AegisGuard v1.1 — Bloqueador Estricto con IA Visual 100% Local (Windows + Android)
 
-**AegisGuard** es un sistema multiplataforma diseñado para bloquear sitios pornográficos, búsquedas sexuales ofuscadas dentro de navegadores y **apps nativas de redes sociales**, y pestañas disparadoras (*Reels, Explorar, Shorts, Para ti*) — **sin monedas, sin puntos y sin atajos de pago para desbloquearlo**.
-
----
-
-## Estructura del Proyecto
-
-- `shared/` — Reglas compartidas (dominios adultos + servidores DoH de evasión + proxies, diccionario semántico ES/EN anti-ofuscación, firmas de redes sociales y especificación del protocolo criptográfico).
-- `windows/` — Aplicación nativa para Windows en Go + extensión de navegador Manifest V3 + instalador blindado PowerShell.
-  - **`windows/dist/aegisguard.exe`** (binario x64 ya compilado)
-  - **`windows/dist/aegisguard-watchdog.exe`** (guardián anti-cierre x64 ya compilado)
-  - `windows/browser-extension/` (Chrome / Edge / Brave)
-  - `windows/scripts/install-windows.ps1` (instalador bajo `NT AUTHORITY\SYSTEM`)
-- `android/` — Proyecto nativo completo en Kotlin + Jetpack Compose + Gradle (`com.aegisguard.app`).
-  - `AegisVpnService.kt`: VPN local Always-On para bloqueo DNS web/apps + Cloudflare Family `1.1.1.3`.
-  - `ContentGuardAccessibilityService.kt`: Filtrado en tiempo real dentro de Instagram, TikTok, X, Reddit, Telegram, YouTube, Facebook y navegadores + bloqueo de pestañas disparadoras + escudo anti-manipulación de Ajustes.
-  - `AegisDeviceAdminReceiver.kt`: Soporte completo **Device Owner** (impide desinstalar, impide Modo Seguro, impide cambiar fecha/hora y bloquea la VPN como obligatoria).
-  - `OnDeviceNsfwScanner.kt`: Motor opcional de visión artificial NSFW 100% local con TensorFlow Lite (sin subir nada a la nube).
+**AegisGuard v1.1** bloquea sitios pornográficos, búsquedas sexuales ofuscadas dentro de navegadores y **apps nativas de redes sociales**, pestañas disparadoras (*Reels, Explorar, Shorts, Para ti*), y ahora incluye **IA Visual NSFW 100% local** en **Windows y Android** (analiza en memoria sin guardar capturas ni subir nada a la nube) — **sin monedas, sin puntos y sin atajos de pago**.
 
 ---
 
-## Instalación en Windows (PC)
+## Novedades v1.1 — IA Visual 100% Local
 
-Los ejecutables `windows/dist/aegisguard.exe` y `windows/dist/aegisguard-watchdog.exe` ya están compilados para Windows 64-bit.
+### En Windows (`windows/`)
+- **`aegisguard-ai.exe`** + **`models/resnet_50_1by2_nsfw.onnx`**: Motor neuronal local **ResNet-50 OpenNSFW** sobre Microsoft ONNX Runtime (`127.0.0.1:18493`, 100% offline).
+- **`aegisguard.exe`** (`internal/vision/`): Captura la pantalla activa únicamente en RAM mediante Win32 GDI cada 2.5 segundos, consulta a `aegisguard-ai.exe` (con respaldo heurístico espacial integrado si el motor neuronal no responde), confirma en 2 cuadros consecutivos (o inmediato ≥ 88%) para evitar falsos positivos, minimiza/cierra automáticamente la ventana explícita y registra el bloqueo en la auditoría SHA-256.
+- **`aegisguard-watchdog.exe`**: Guardián anti-cierre que reinicia automáticamente el servicio si intentan terminarlo.
+- **Un solo instalador** (`scripts/install-windows.ps1`): Instala y registra los 3 servicios bajo `NT AUTHORITY\SYSTEM` (`AegisGuard-VisionAI`, `AegisGuard-Core`, `AegisGuard-Watchdog`).
 
-1. Copia la carpeta `windows/` a tu PC con Windows.
-2. Abre **PowerShell como Administrador** y ejecuta:
+### En Android (`android/`)
+- **`ScreenVisionService.kt`** + **`OnDeviceNsfwScanner.kt`** + **`assets/nsfw.tflite`**: Servicio local con `MediaProjection` + **TensorFlow Lite (OpenNSFW)** embebido dentro del APK.
+- Escanea 1 cuadro reducido en RAM cada 2.5s **solo cuando la pantalla está encendida**, nunca guarda imágenes ni envía datos a internet, y lanza automáticamente la pantalla de bloqueo (`BlockOverlayActivity`) al detectar contenido explícito en TikTok, Reels, Telegram, X, Reddit o navegadores (incluso sin palabras clave).
+
+---
+
+## Instalación Rápida (desde Releases v1.1.0)
+
+### 1. Windows (`AegisGuard-Windows-x64-v1.1.zip`)
+1. Descomprime el ZIP en tu PC.
+2. Abre **PowerShell como Administrador** dentro de esa carpeta y ejecuta:
    ```powershell
    Set-ExecutionPolicy Bypass -Scope Process -Force
    .\scripts\install-windows.ps1
    ```
-3. Esto instala ambos ejecutables en `C:\Program Files\AegisGuard`, bloquea permisos NTFS, aplica políticas de navegadores (SafeSearch forzado, sin Incógnito, sin DoH de evasión), configura DNS local (`127.0.0.1`) y registra las tareas bajo `SYSTEM` con auto-reinicio.
-4. Abre el panel de control en tu navegador: **`http://127.0.0.1:18492`**.
-5. Carga la extensión de navegador ubicada en `C:\Program Files\AegisGuard\browser-extension` en Chrome/Edge/Brave.
+3. Abre el panel en `http://127.0.0.1:18492` (verás la insignia **IA Visual: ResNet-50 ONNX** y el contador de cuadros/bloqueos).
+4. Carga la extensión de navegador de `C:\Program Files\AegisGuard\browser-extension` en Chrome/Edge/Brave.
 
-### Generar código de aprobación (Persona de Confianza)
-Tu persona de confianza puede generar el código HMAC de un solo uso sin conexión a internet:
-```powershell
-aegisguard.exe partner-approve --secret <CLAVE_SECRETA> --device <DEVICE_ID> --challenge <RETO_ID>
-```
-
----
-
-## Compilación e Instalación en Android (Móvil)
-
-1. Abre la carpeta `android/` en **Android Studio** (o compila con Gradle si tienes el Android SDK instalado):
-   ```bash
-   ./gradlew assembleRelease
-   ```
-2. Instala el APK en tu teléfono Android.
-3. **(Recomendado para blindaje máximo anti-desinstalación, sin root)**:
-   - Activa Depuración USB en tu teléfono, retira temporalmente las cuentas de Google en Ajustes → Cuentas, conecta el cable USB a tu PC y ejecuta:
-     - En Windows: `android\scripts\activate-device-owner.bat`
-     - En Linux/macOS: `bash android/scripts/activate-device-owner.sh`
-   - Vuelve a añadir tu cuenta de Google.
-4. Abre **AegisGuard** en el teléfono y activa:
-   - **VPN Local** (y marca *VPN siempre activa* + *Bloquear conexiones sin VPN*).
-   - **Servicio de Accesibilidad** (para filtrar búsquedas dentro de Instagram, TikTok, X, Telegram, Reddit, etc.).
-   - **Aplicar Blindaje Total Device Owner**.
-5. *(Opcional IA Visual)*: Para activar la detección visual NSFW local sin nube, coloca el modelo cuantizado `nsfw_mobilenet_v2.tflite` en `android/app/src/main/assets/` antes de compilar.
+### 2. Android (`AegisGuard-Android-v1.1.apk`)
+1. Instala `AegisGuard-Android-v1.1.apk` en tu móvil.
+2. Abre **AegisGuard v1.1** y activa los 3 escudos:
+   - **Activar VPN Local** (+ *VPN siempre activa* en Ajustes).
+   - **Activar IA Visual en Pantalla (100% Local TFLite)**.
+   - **Activar Accesibilidad** (para bloquear búsquedas y *Reels/Explorar/Shorts*).
+3. *(Opcional anti-desinstalación sin root)*: Ejecuta `android\scripts\activate-device-owner.bat` por USB y pulsa **Aplicar Blindaje Total Device Owner**.

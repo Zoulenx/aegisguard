@@ -11,6 +11,7 @@ import (
 	"aegisguard/windows/internal/dnsproxy"
 	"aegisguard/windows/internal/filter"
 	"aegisguard/windows/internal/locker"
+	"aegisguard/windows/internal/vision"
 )
 
 //go:embed static/index.html
@@ -22,6 +23,7 @@ type Dashboard struct {
 	DNS        *dnsproxy.Server
 	Domain     *filter.DomainFilter
 	Semantic   *filter.SemanticFilter
+	Vision     *vision.Engine
 }
 
 func (d *Dashboard) Start(ctx context.Context) (string, error) {
@@ -44,6 +46,7 @@ func (d *Dashboard) Start(ctx context.Context) (string, error) {
 	mux.HandleFunc("/api/rules/add", d.handleAddRules)
 	mux.HandleFunc("/api/sync/export", d.handleSyncExport)
 	mux.HandleFunc("/api/sync/import", d.handleSyncImport)
+	mux.HandleFunc("/api/vision/threshold", d.handleVisionThreshold)
 
 	ln, err := net.Listen("tcp", d.ListenAddr)
 	if err != nil {
@@ -81,17 +84,47 @@ func (d *Dashboard) handleStatus(w http.ResponseWriter, r *http.Request) {
 	if d.DNS != nil {
 		blocked, allowed, safe = d.DNS.Stats()
 	}
+	var vis vision.Stats
+	if d.Vision != nil {
+		vis = d.Vision.Stats()
+	}
 	writeJSON(w, http.StatusOK, map[string]any{
-		"locked":      locked,
-		"lock_reason": reason,
-		"audit_valid": d.Locker.VerifyAuditChain(),
-		"state":       d.Locker.Snapshot(),
+		"version":      "1.1.0",
+		"locked":       locked,
+		"lock_reason":  reason,
+		"audit_valid":  d.Locker.VerifyAuditChain(),
+		"state":        d.Locker.Snapshot(),
+		"vision_stats": vis,
 		"dns_stats": map[string]uint64{
 			"blocked":    blocked,
 			"allowed":    allowed,
 			"safesearch": safe,
 		},
 	})
+}
+
+func (d *Dashboard) handleVisionThreshold(w http.ResponseWriter, r *http.Request) {
+	if d.Vision == nil {
+		writeErr(w, http.StatusServiceUnavailable, "IA Visual no inicializada")
+		return
+	}
+	var req struct {
+		Threshold float64 `json:"threshold"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeErr(w, http.StatusBadRequest, "JSON inválido")
+		return
+	}
+	cur := d.Vision.Stats().Threshold
+	locked, _ := d.Locker.IsSettingsLocked()
+	// Solo permite hacer el umbral más estricto (más bajo) mientras está bloqueado
+	if locked && req.Threshold > cur {
+		writeErr(w, http.StatusForbidden, "No puedes relajar la sensibilidad de la IA Visual mientras la protección está bloqueada")
+		return
+	}
+	d.Vision.SetThreshold(req.Threshold)
+	d.Locker.RecordBlockEvent("VISION_CONFIG", "Umbral IA Visual actualizado")
+	writeJSON(w, http.StatusOK, d.Vision.Stats())
 }
 
 func (d *Dashboard) handlePanic(w http.ResponseWriter, r *http.Request) {

@@ -16,6 +16,7 @@ import (
 	"aegisguard/windows/internal/locker"
 	"aegisguard/windows/internal/rules"
 	"aegisguard/windows/internal/ui"
+	"aegisguard/windows/internal/vision"
 	"aegisguard/windows/internal/winprotect"
 )
 
@@ -45,10 +46,10 @@ func main() {
 }
 
 func printUsage() {
-	fmt.Println(`AegisGuard — Bloqueador Estricto de Contenido Explícito (Windows)
+	fmt.Println(`AegisGuard v1.1 — Bloqueador Estricto con IA Visual Local (Windows)
 
 Uso:
-  aegisguard run [--dns 127.0.0.1:53] [--ui 127.0.0.1:18492] [--data-dir <ruta>] [--apply-os]
+  aegisguard run [--dns 127.0.0.1:53] [--ui 127.0.0.1:18492] [--ai http://127.0.0.1:18493] [--data-dir <ruta>] [--apply-os]
   aegisguard partner-approve --secret <CLAVE> --device <DEVICE_ID> --challenge <RETO_ID>
   aegisguard test-text "<texto o busqueda a analizar>"
   aegisguard apply-policies`)
@@ -58,6 +59,7 @@ func runDaemon(args []string) {
 	fs := flag.NewFlagSet("run", flag.ExitOnError)
 	dnsAddr := fs.String("dns", "127.0.0.1:53", "Dirección UDP del servidor DNS de filtrado")
 	uiAddr := fs.String("ui", "127.0.0.1:18492", "Dirección HTTP del panel de control local")
+	aiAddr := fs.String("ai", "http://127.0.0.1:18493", "Endpoint local del motor neuronal ONNX (aegisguard-ai.exe)")
 	dataDir := fs.String("data-dir", defaultDataDir(), "Directorio de datos protegidos")
 	applyOS := fs.Bool("apply-os", false, "Aplicar hosts, DNS del sistema y políticas de navegador (requiere Admin)")
 	_ = fs.Parse(args)
@@ -110,6 +112,14 @@ func runDaemon(args []string) {
 		log.Printf("[OK] Filtro DNS activo en %s (Upstream: 1.1.1.3 / CleanBrowsing)", boundDNS)
 	}
 
+	// Start 100% Local Visual AI Screen Scanner (ResNet-50 ONNX sidecar + pure-Go fallback)
+	visionEng := vision.NewEngine(*aiAddr)
+	visionEng.StartGuard(ctx, 2500*time.Millisecond, func(windowTitle string, v vision.Verdict) {
+		log.Printf("[VISUAL-AI-BLOCK] ventana=%q motor=%s conf=%.0f%%", windowTitle, v.Engine, v.Confidence*100)
+		lockMgr.RecordBlockEvent("VISUAL_NSFW_BLOCK", fmt.Sprintf("%s -> %s", windowTitle, v.Reason))
+	})
+	log.Printf("[OK] IA Visual 100%% local iniciada (endpoint ONNX: %s)", *aiAddr)
+
 	// Start Embedded Local Dashboard
 	dash := &ui.Dashboard{
 		ListenAddr: *uiAddr,
@@ -117,12 +127,13 @@ func runDaemon(args []string) {
 		DNS:        dnsSrv,
 		Domain:     domFilter,
 		Semantic:   semFilter,
+		Vision:     visionEng,
 	}
 	boundUI, err := dash.Start(ctx)
 	if err != nil {
 		log.Fatalf("error iniciando panel local: %v", err)
 	}
-	log.Printf("[OK] Panel de control AegisGuard disponible en http://%s", boundUI)
+	log.Printf("[OK] Panel de control AegisGuard v1.1 disponible en http://%s", boundUI)
 
 	// Start Windows Desktop Content Guard (window titles & UI Automation inputs)
 	winprotect.StartDesktopContentGuard(ctx, semFilter, func(appTitle, reason string) {
